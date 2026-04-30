@@ -1,3 +1,7 @@
+// shell.c: 입력 담당(컨트롤러)
+// 사용자 -> shell -> 명령 전달 
+// 다른 프로그램으로 보내는 역할
+
 #include <stdio.h>
 #include <string.h>
 
