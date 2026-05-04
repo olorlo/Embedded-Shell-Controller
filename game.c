@@ -11,6 +11,7 @@ int main() {
     char cmd[100];
 
     while (1) {
+
         // shell에서 전달받는 입력 
         fgets(cmd, sizeof(cmd), stdin);
 
@@ -20,6 +21,7 @@ int main() {
         // 종료 조건
         if (strcmp(cmd, "exit") == 0){
             printf("Game Exit\n");
+            fflush(stdout);
             break;
         }
 
@@ -45,6 +47,9 @@ int main() {
         else {
             printf("[GAME] Unknown command\n");
         }
+
+        fflush(stdout);
+
     }
     return 0;
 }

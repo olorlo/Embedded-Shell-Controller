@@ -4,59 +4,75 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
+#include <sys/types.h>
 
 void print_prompt() {
     printf("> ");
-}
-
-void execute_command(char *cmd) {
-
-    if (strcmp(cmd, "start") == 0) {
-        printf("Game Start\n");
-    }
-    else if (strcmp(cmd, "left") == 0) {
-        printf("Move Left\n");
-    }
-    else if (strcmp(cmd, "right") == 0) {
-        printf("Move Right\n");
-    }
-    else if (strcmp(cmd, "down") == 0) {
-        printf("Move Down\n");
-    }
-    else if (strcmp(cmd, "rotate") == 0) {
-        printf("Rotate Block\n");
-    }
-    else if (strcmp(cmd, "status") == 0) {
-        printf("Game Status\n");
-    }
-    else if (strcmp(cmd, "exit") == 0) {
-        printf("Exit\n");
-    }
-    else {
-        printf("Unknown command\n");
-    }
+    fflush(stdout);
 }
 
 int main() {
     char input[100];
 
-    while (1) {
-        print_prompt();
+    int to_game[2];   // shell -> game
+    int from_game[2]; //  game -> shell
 
-        // 입력 받기
-        fgets(input, sizeof(input), stdin);
+    // fd[0]: read, fd[1]: write
+    pipe(to_game); 
+    pipe(from_game);
 
-        // 개행 제거
-        input[strcspn(input, "\n")] = 0;
+    pid_t pid = fork();
 
-        // exit 처리
-        if (strcmp(input, "exit") == 0) {
-            break;
-        }
+    if (pid == 0) {
+        // 자식 프로세스 (game 실행)
 
-        // 명령 실행
-        execute_command(input);
+        // dup2(fd[0], STDIN_FILENO); // pipe -> stdin 연결
+        // close(fd[1]);
+
+        dup2(to_game[0], STDIN_FILENO);
+        dup2(from_game[1], STDOUT_FILENO);
+
+        close(to_game[1]);   // 쓰기쪽 필요 없음
+        close(from_game[0]); // 읽기쪽 필요 없음
+
+        execl("./game", "game", NULL);
     }
+    else {
+        // 부모 프로세스 (shell)
+        // close(fd[0]);
+
+        close(to_game[0]);    // 읽기 필요 없음
+        close(from_game[1]);  // 쓰기 필요 없음
+        
+        print_prompt();
+        while (1) {
+            
+            // 입력 받기
+            fgets(input, sizeof(input), stdin);
+            
+            // 개행 제거
+            input[strcspn(input, "\n")] = 0;
+
+            // game으로 input 전달
+            write(to_game[1], input, strlen(input));
+            write(to_game[1], "\n", 1);
+            
+            // exit 처리
+            if (strcmp(input, "exit") == 0)
+                break;
+
+            // game 출력 받아오기
+            char buffer[100];
+            int n = read(from_game[0], buffer, sizeof(buffer)-1);
+            buffer[n] = 0;
+
+            printf("%s", buffer);
+
+            print_prompt();
+        }
+    }
+
 
     return 0;
 }
