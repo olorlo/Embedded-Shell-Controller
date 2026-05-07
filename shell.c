@@ -6,6 +6,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/types.h>
+#include <sys/select.h>
 
 void print_prompt() {
     printf("> ");
@@ -45,7 +46,13 @@ int main() {
         close(to_game[0]);    // 읽기 필요 없음
         close(from_game[1]);  // 쓰기 필요 없음
         
-        print_prompt();
+        // 처음에 map 나오도록 설정
+        char buffer[1000];
+        int n = read(from_game[0], buffer, sizeof(buffer)-1);
+        buffer[n] = 0;
+        printf("%s", buffer);
+        
+        // print_prompt();
         while (1) {
             
             // 입력 받기
@@ -63,13 +70,13 @@ int main() {
                 break;
 
             // game 출력 받아오기
-            char buffer[100];
+            char buffer[100000];
             int n = read(from_game[0], buffer, sizeof(buffer)-1);
             buffer[n] = 0;
 
             printf("%s", buffer);
 
-            print_prompt();
+            // print_prompt();
         }
     }
 
