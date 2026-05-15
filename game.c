@@ -8,6 +8,9 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <pthread.h>
+#include <time.h>
+
+#define BLOCK_TYPES 4
 
 #define WIDTH 10
 #define HEIGHT 10
@@ -76,23 +79,63 @@ void draw_map() {
 
 
 // 블록 관련된 함수들 ----------------
+
+// 다양한 블록 만들기 
+int block_shapes[BLOCK_TYPES][4][4] = {
+    // O 블록
+    {
+        {1,1,0,0},
+        {1,1,0,0},
+        {0,0,0,0},
+        {0,0,0,0}
+    },
+
+    // I 블록
+    {
+        {1,1,1,1},
+        {0,0,0,0},
+        {0,0,0,0},
+        {0,0,0,0}
+    },
+
+    // T 블록
+    {
+        {0,1,0,0},
+        {1,1,1,0},
+        {0,0,0,0},
+        {0,0,0,0}
+    },
+
+    // L 블록
+    {
+        {1,0,0,0},
+        {1,1,1,0},
+        {0,0,0,0},
+        {0,0,0,0}
+    }
+};
+
 // 블록 생성 
 void spawn_block() {
-    
+
+    // 랜덤 함수 추가
+    int type = rand() % BLOCK_TYPES;
+
     // shape 초기화
     for (int i=0;i<4;i++){
         for (int j=0;j<4;j++){
-            current.shape[i][j] = 0;
+            // 랜덤 블록 모양을 현재 모양에 저장함
+            current.shape[i][j] = block_shapes[type][i][j];
         }
     }
     
-    current.shape[0][0] = 1;
-    current.shape[0][1] = 1;
-    current.shape[1][0] = 1;
-    current.shape[1][1] = 1;
-    
+    // current.shape[0][0] = 1;
+    // current.shape[0][1] = 1;
+    // current.shape[1][0] = 1;
+    // current.shape[1][1] = 1;
+
     // 출발 지점 설정
-    current.x = WIDTH / 2;
+    current.x = WIDTH / 2 - 2;
     current.y = 0;
     
 }
@@ -104,7 +147,6 @@ void spawn_block() {
 int can_move(int newX, int newY) {
     for (int r=0;r<4;r++){
         for (int c =0;c<4;c++){
-            
             // 블록 칸인 경우만 검사
             if (current.shape[r][c]) {
                 int nextY = newY + r;
@@ -140,6 +182,51 @@ void fix_block() {
         }
     }
 }
+
+// 회전 함수 추가
+void rotate_block() {
+
+    int temp[4][4];
+
+    // 시계 방향 회전
+    for (int r=0;r<4;r++) {
+        for (int c=0;c<4;c++) {
+            temp[c][3-r] = current.shape[r][c];
+        }
+    }
+
+    // 회전 가능 여부 검사
+    for (int r=0;r<4;r++) {
+        for (int c=0;c<4;c++) {
+
+            // 회전된 블록 칸만 검사
+            if (temp[r][c]) {
+
+                int nextY = current.y + r;
+                int nextX = current.x + c;
+                
+                // 벽 충돌
+                if (nextX < 0 || nextX >= WIDTH) 
+                    return;
+
+                // 바닥 충돌
+                if (nextY >= HEIGHT)
+                    return;
+
+                // 고정 블록 충돌
+                if (map[nextY][nextX] == 'X')
+                    return;
+            }
+        }
+    }
+
+    // 살아남은 좌표를 current로 넘긴다.
+    for (int r=0;r<4;r++)
+        for(int c=0;c<4;c++)
+            current.shape[r][c] = temp[r][c];
+}
+
+
 
 // ----------------
 
@@ -180,6 +267,8 @@ void* gravity(void* arg) {
 
 
 int main() {
+    srand(time(NULL));
+
     char cmd[100];
     
     init_map();
@@ -273,11 +362,20 @@ int main() {
 
         // rotate 회전
         else if (strcmp(cmd, "rotate") == 0) {
-            // printf("[GAME] Rotate Block\n");
+            
+            pthread_mutex_lock(&lock);
+
+            // 회전
+            rotate_block();
+            draw_map();
+
+            pthread_mutex_unlock(&lock);
         }
+
         else if (strcmp(cmd, "status") == 0) {
             printf("[GAME] Status OK\n");
         }
+        
         else {
             printf("[GAME] Unknown command\n");
         }

@@ -92,6 +92,8 @@ int main() {
                 write(to_game[1], "right\n", 6);
             else if (ch == 's')
                 write(to_game[1], "down\n", 5);
+            else if (ch == 'w')
+                write(to_game[1], "rotate\n", 7);
             else if (ch == 'q') {
                 write(to_game[1], "exit\n", 5);
                 break;
